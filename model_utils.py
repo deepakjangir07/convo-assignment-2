@@ -28,18 +28,30 @@ from transformers import AutoTokenizer, AutoModelForCausalLM
 from sentence_transformers import SentenceTransformer
 from langchain.text_splitter import RecursiveCharacterTextSplitter
 # Handle SQLite dependency issue for ChromaDB
+CHROMADB_AVAILABLE = False
+chromadb = None
+
 try:
     import chromadb
     CHROMADB_AVAILABLE = True
+    print("✅ ChromaDB imported successfully")
 except RuntimeError as e:
     if "sqlite3" in str(e):
         print("⚠️  ChromaDB not available due to SQLite version. Using alternative storage.")
         CHROMADB_AVAILABLE = False
+        chromadb = None
     else:
-        raise e
-except ImportError:
-    print("⚠️  ChromaDB not available. Using alternative storage.")
+        print(f"⚠️  ChromaDB runtime error: {e}. Using alternative storage.")
+        CHROMADB_AVAILABLE = False
+        chromadb = None
+except ImportError as e:
+    print(f"⚠️  ChromaDB not available: {e}. Using alternative storage.")
     CHROMADB_AVAILABLE = False
+    chromadb = None
+except Exception as e:
+    print(f"⚠️  Unexpected error importing ChromaDB: {e}. Using alternative storage.")
+    CHROMADB_AVAILABLE = False
+    chromadb = None
 
 from rank_bm25 import BM25Okapi
 from peft import PeftModel
@@ -188,10 +200,17 @@ class FinancialQASystem:
             )
             
             # Setup BM25
-            tokenized_chunks = [chunk.lower().split() for chunk in self.chunks]
-            self.bm25 = BM25Okapi(tokenized_chunks)
+            try:
+                tokenized_chunks = [chunk.lower().split() for chunk in self.chunks]
+                self.bm25 = BM25Okapi(tokenized_chunks)
+                print("✅ BM25 sparse index created successfully")
+            except Exception as e:
+                print(f"⚠️  BM25 setup failed: {e}")
+                self.bm25 = None
             
-            print(f"Retrieval system setup complete with {len(self.chunks)} chunks.")
+            print(f"✅ Retrieval system setup complete with {len(self.chunks)} chunks.")
+            print(f"📊 Storage: {'ChromaDB' if self.collection else 'Alternative (In-Memory)'}")
+            print(f"📊 Sparse: {'BM25' if self.bm25 else 'Not available'}")
         else:
             # Try to load from local PDFs if local data not available
             print("Local data not found, attempting to load from local PDFs...")
@@ -203,8 +222,9 @@ class FinancialQASystem:
                 self.chunks = text_splitter.split_text(full_text)
                 
                 # Setup storage (ChromaDB or alternative)
-                if CHROMADB_AVAILABLE:
+                if CHROMADB_AVAILABLE and chromadb is not None:
                     try:
+                        print("🔄 Attempting to setup ChromaDB...")
                         client = chromadb.Client()
                         self.collection = client.get_or_create_collection(name="financials_rag")
                         
@@ -220,13 +240,21 @@ class FinancialQASystem:
                         print(f"⚠️  ChromaDB failed: {e}. Using alternative storage.")
                         self._setup_alternative_storage()
                 else:
+                    print("🔄 ChromaDB not available, using alternative storage...")
                     self._setup_alternative_storage()
                 
                 # Setup BM25
-                tokenized_chunks = [chunk.lower().split() for chunk in self.chunks]
-                self.bm25 = BM25Okapi(tokenized_chunks)
+                try:
+                    tokenized_chunks = [chunk.lower().split() for chunk in self.chunks]
+                    self.bm25 = BM25Okapi(tokenized_chunks)
+                    print("✅ BM25 sparse index created successfully")
+                except Exception as e:
+                    print(f"⚠️  BM25 setup failed: {e}")
+                    self.bm25 = None
                 
-                print(f"Retrieval system setup complete with {len(self.chunks)} chunks.")
+                print(f"✅ Retrieval system setup complete with {len(self.chunks)} chunks.")
+                print(f"📊 Storage: {'ChromaDB' if self.collection else 'Alternative (In-Memory)'}")
+                print(f"📊 Sparse: {'BM25' if self.bm25 else 'Not available'}")
             else:
                 print("Data file not found and Google Drive PDFs not accessible. Please ensure data is available.")
     
@@ -238,24 +266,35 @@ class FinancialQASystem:
         processed_query = query.lower()
         
         # Dense Retrieval
-        if self.collection and CHROMADB_AVAILABLE:
+        if self.collection and CHROMADB_AVAILABLE and chromadb is not None:
             # Use ChromaDB if available
             try:
                 query_embedding = self.embedding_model.encode(processed_query).tolist()
                 dense_results = self.collection.query(query_embeddings=[query_embedding], n_results=top_k)
                 dense_docs = dense_results['documents'][0]
+                print("✅ ChromaDB retrieval successful")
             except Exception as e:
                 print(f"⚠️  ChromaDB query failed: {e}. Using alternative retrieval.")
                 dense_docs = self._alternative_dense_retrieval(query, top_k)
         else:
             # Use alternative storage
+            print("🔄 Using alternative dense retrieval...")
             dense_docs = self._alternative_dense_retrieval(query, top_k)
         
         # Sparse Retrieval
-        tokenized_query = processed_query.split()
-        bm25_scores = self.bm25.get_scores(tokenized_query)
-        top_n_indices = np.argsort(bm25_scores)[::-1][:top_k]
-        sparse_docs = [self.chunks[i] for i in top_n_indices]
+        if self.bm25 is not None:
+            try:
+                tokenized_query = processed_query.split()
+                bm25_scores = self.bm25.get_scores(tokenized_query)
+                top_n_indices = np.argsort(bm25_scores)[::-1][:top_k]
+                sparse_docs = [self.chunks[i] for i in top_n_indices]
+                print("✅ BM25 sparse retrieval successful")
+            except Exception as e:
+                print(f"⚠️  BM25 retrieval failed: {e}. Using simple keyword matching.")
+                sparse_docs = self._simple_keyword_retrieval(query, top_k)
+        else:
+            print("🔄 BM25 not available, using simple keyword matching...")
+            sparse_docs = self._simple_keyword_retrieval(query, top_k)
         
         # RRF Fusion
         fused_scores = {}
@@ -267,6 +306,32 @@ class FinancialQASystem:
         
         reranked_results = sorted(fused_scores.items(), key=lambda item: item[1], reverse=True)
         return [doc for doc, score in reranked_results][:top_k]
+    
+    def _simple_keyword_retrieval(self, query, top_k=5):
+        """Simple keyword-based retrieval when BM25 is not available."""
+        try:
+            query_words = query.lower().split()
+            chunk_scores = []
+            
+            for i, chunk in enumerate(self.chunks):
+                chunk_lower = chunk.lower()
+                score = sum(1 for word in query_words if word in chunk_lower)
+                chunk_scores.append((score, i))
+            
+            # Sort by score and get top-k
+            chunk_scores.sort(reverse=True)
+            top_indices = [i for score, i in chunk_scores[:top_k] if score > 0]
+            
+            if top_indices:
+                return [self.chunks[i] for i in top_indices]
+            else:
+                # Fallback to first few chunks if no matches
+                return self.chunks[:top_k]
+                
+        except Exception as e:
+            print(f"⚠️  Simple keyword retrieval failed: {e}")
+            # Ultimate fallback
+            return self.chunks[:top_k] if self.chunks else []
     
     def _alternative_dense_retrieval(self, query, top_k=5):
         """Alternative dense retrieval using in-memory embeddings."""
