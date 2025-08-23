@@ -178,45 +178,12 @@ class FinancialQASystem:
         """Setup the retrieval system with text chunks and indices."""
         print("Setting up retrieval system...")
         
-        # Load and process text if available
-        if os.path.exists(self.data_path):
-            with open(self.data_path, 'r', encoding='utf-8') as f:
-                full_text = f.read()
-            
-            # Create text chunks
-            text_splitter = RecursiveCharacterTextSplitter(chunk_size=400, chunk_overlap=50)
-            self.chunks = text_splitter.split_text(full_text)
-            
-            # Setup ChromaDB
-            client = chromadb.Client()
-            self.collection = client.get_or_create_collection(name="financials_rag")
-            
-            # Create embeddings
-            chunk_embeddings = self.embedding_model.encode(self.chunks, show_progress_bar=False)
-            self.collection.add(
-                ids=[str(i) for i in range(len(self.chunks))],
-                embeddings=chunk_embeddings.tolist(),
-                documents=self.chunks
-            )
-            
-            # Setup BM25
-            try:
-                tokenized_chunks = [chunk.lower().split() for chunk in self.chunks]
-                self.bm25 = BM25Okapi(tokenized_chunks)
-                print("✅ BM25 sparse index created successfully")
-            except Exception as e:
-                print(f"⚠️  BM25 setup failed: {e}")
-                self.bm25 = None
-            
-            print(f"✅ Retrieval system setup complete with {len(self.chunks)} chunks.")
-            print(f"📊 Storage: {'ChromaDB' if self.collection else 'Alternative (In-Memory)'}")
-            print(f"📊 Sparse: {'BM25' if self.bm25 else 'Not available'}")
-        else:
-            # Try to load from local PDFs if local data not available
-            print("Local data not found, attempting to load from local PDFs...")
-            full_text = self._load_from_local_pdfs()
-            
-            if full_text and "Error" not in full_text:
+        try:
+            # Load and process text if available
+            if os.path.exists(self.data_path):
+                with open(self.data_path, 'r', encoding='utf-8') as f:
+                    full_text = f.read()
+                
                 # Create text chunks
                 text_splitter = RecursiveCharacterTextSplitter(chunk_size=400, chunk_overlap=50)
                 self.chunks = text_splitter.split_text(full_text)
@@ -225,17 +192,22 @@ class FinancialQASystem:
                 if CHROMADB_AVAILABLE and chromadb is not None:
                     try:
                         print("🔄 Attempting to setup ChromaDB...")
-                        client = chromadb.Client()
-                        self.collection = client.get_or_create_collection(name="financials_rag")
-                        
-                        # Create embeddings
-                        chunk_embeddings = self.embedding_model.encode(self.chunks, show_progress_bar=False)
-                        self.collection.add(
-                            ids=[str(i) for i in range(len(self.chunks))],
-                            embeddings=chunk_embeddings.tolist(),
-                            documents=self.chunks
-                        )
-                        print("✅ ChromaDB vector store created successfully")
+                        # Double-check chromadb is actually available
+                        if hasattr(chromadb, 'Client'):
+                            client = chromadb.Client()
+                            self.collection = client.get_or_create_collection(name="financials_rag")
+                            
+                            # Create embeddings
+                            chunk_embeddings = self.embedding_model.encode(self.chunks, show_progress_bar=False)
+                            self.collection.add(
+                                ids=[str(i) for i in range(len(self.chunks))],
+                                embeddings=chunk_embeddings.tolist(),
+                                documents=self.chunks
+                            )
+                            print("✅ ChromaDB vector store created successfully")
+                        else:
+                            print("⚠️  ChromaDB Client not available. Using alternative storage.")
+                            self._setup_alternative_storage()
                     except Exception as e:
                         print(f"⚠️  ChromaDB failed: {e}. Using alternative storage.")
                         self._setup_alternative_storage()
@@ -256,7 +228,70 @@ class FinancialQASystem:
                 print(f"📊 Storage: {'ChromaDB' if self.collection else 'Alternative (In-Memory)'}")
                 print(f"📊 Sparse: {'BM25' if self.bm25 else 'Not available'}")
             else:
-                print("Data file not found and Google Drive PDFs not accessible. Please ensure data is available.")
+                # Try to load from local PDFs if local data not available
+                print("Local data not found, attempting to load from local PDFs...")
+                full_text = self._load_from_local_pdfs()
+                
+                if full_text and "Error" not in full_text:
+                    # Create text chunks
+                    text_splitter = RecursiveCharacterTextSplitter(chunk_size=400, chunk_overlap=50)
+                    self.chunks = text_splitter.split_text(full_text)
+                    
+                    # Setup storage (ChromaDB or alternative)
+                    if CHROMADB_AVAILABLE and chromadb is not None:
+                        try:
+                            print("🔄 Attempting to setup ChromaDB...")
+                            # Double-check chromadb is actually available
+                            if hasattr(chromadb, 'Client'):
+                                client = chromadb.Client()
+                                self.collection = client.get_or_create_collection(name="financials_rag")
+                                
+                                # Create embeddings
+                                chunk_embeddings = self.embedding_model.encode(self.chunks, show_progress_bar=False)
+                                self.collection.add(
+                                    ids=[str(i) for i in range(len(self.chunks))],
+                                    embeddings=chunk_embeddings.tolist(),
+                                    documents=self.chunks
+                                )
+                                print("✅ ChromaDB vector store created successfully")
+                            else:
+                                print("⚠️  ChromaDB Client not available. Using alternative storage.")
+                                self._setup_alternative_storage()
+                        except Exception as e:
+                            print(f"⚠️  ChromaDB failed: {e}. Using alternative storage.")
+                            self._setup_alternative_storage()
+                    else:
+                        print("🔄 ChromaDB not available, using alternative storage...")
+                        self._setup_alternative_storage()
+                    
+                    # Setup BM25
+                    try:
+                        tokenized_chunks = [chunk.lower().split() for chunk in self.chunks]
+                        self.bm25 = BM25Okapi(tokenized_chunks)
+                        print("✅ BM25 sparse index created successfully")
+                    except Exception as e:
+                        print(f"⚠️  BM25 setup failed: {e}")
+                        self.bm25 = None
+                    
+                    print(f"✅ Retrieval system setup complete with {len(self.chunks)} chunks.")
+                    print(f"📊 Storage: {'ChromaDB' if self.collection else 'Alternative (In-Memory)'}")
+                    print(f"📊 Sparse: {'BM25' if self.bm25 else 'Not available'}")
+                else:
+                    print("Data file not found and Google Drive PDFs not accessible. Please ensure data is available.")
+                    
+        except Exception as e:
+            print(f"❌ Critical error in retrieval setup: {e}")
+            print("🔄 Attempting to continue with minimal setup...")
+            # Ensure we have at least some basic setup
+            if not hasattr(self, 'chunks') or not self.chunks:
+                self.chunks = ["Financial data not available. Please check your data sources."]
+            if not hasattr(self, 'collection'):
+                self.collection = None
+            if not hasattr(self, 'bm25'):
+                self.bm25 = None
+            if not hasattr(self, 'chunk_embeddings'):
+                self.chunk_embeddings = None
+            print("✅ Minimal retrieval system setup complete")
     
     def hybrid_retrieval(self, query, top_k=5):
         """Perform hybrid retrieval using BM25 and vector search."""
