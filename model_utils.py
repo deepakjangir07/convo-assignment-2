@@ -1,10 +1,29 @@
 import torch
-import fitz  # PyMuPDF
 import re
 import os
 import time
 import numpy as np
 import pandas as pd
+
+# Handle PyMuPDF import with fallback
+PYMUPDF_AVAILABLE = False
+fitz = None
+
+try:
+    import PyMuPDF
+    fitz = PyMuPDF
+    PYMUPDF_AVAILABLE = True
+    print("✅ PyMuPDF imported successfully")
+except ImportError:
+    try:
+        import fitz
+        PYMUPDF_AVAILABLE = True
+        print("✅ fitz (PyMuPDF) imported successfully")
+    except ImportError:
+        print("⚠️  PyMuPDF not available. PDF processing will be limited.")
+        PYMUPDF_AVAILABLE = False
+        fitz = None
+
 from transformers import AutoTokenizer, AutoModelForCausalLM
 from sentence_transformers import SentenceTransformer
 from langchain.text_splitter import RecursiveCharacterTextSplitter
@@ -78,6 +97,10 @@ class FinancialQASystem:
     
     def _load_from_local_pdfs(self):
         """Load financial data from local PDF files."""
+        if not PYMUPDF_AVAILABLE:
+            print("❌ PyMuPDF not available. Cannot process PDFs.")
+            return "PDF processing not available. Please install PyMuPDF."
+        
         try:
             pdf_path_2023 = 'MSFT_2023_10K.pdf'
             pdf_path_2022 = 'MSFT_2022_10K.pdf'
@@ -318,6 +341,9 @@ Answer:
     
     def process_pdf(self, pdf_path):
         """Process a PDF file and add to the knowledge base."""
+        if not PYMUPDF_AVAILABLE:
+            return False, "PDF processing not available. Please install PyMuPDF."
+        
         try:
             doc = fitz.open(pdf_path)
             text = ""
