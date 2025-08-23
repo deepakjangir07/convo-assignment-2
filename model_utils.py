@@ -8,7 +8,20 @@ import pandas as pd
 from transformers import AutoTokenizer, AutoModelForCausalLM
 from sentence_transformers import SentenceTransformer
 from langchain.text_splitter import RecursiveCharacterTextSplitter
-import chromadb
+# Handle SQLite dependency issue for ChromaDB
+try:
+    import chromadb
+    CHROMADB_AVAILABLE = True
+except RuntimeError as e:
+    if "sqlite3" in str(e):
+        print("⚠️  ChromaDB not available due to SQLite version. Using alternative storage.")
+        CHROMADB_AVAILABLE = False
+    else:
+        raise e
+except ImportError:
+    print("⚠️  ChromaDB not available. Using alternative storage.")
+    CHROMADB_AVAILABLE = False
+
 from rank_bm25 import BM25Okapi
 from peft import PeftModel
 import warnings
@@ -112,6 +125,20 @@ class FinancialQASystem:
             print(f"❌ Error loading PDFs: {e}")
             return f"Error loading financial data: {str(e)}"
     
+    def _setup_alternative_storage(self):
+        """Setup alternative storage when ChromaDB is not available."""
+        print("🔄 Setting up alternative storage...")
+        try:
+            # Store embeddings in memory as numpy arrays
+            chunk_embeddings = self.embedding_model.encode(self.chunks, show_progress_bar=False)
+            self.chunk_embeddings = chunk_embeddings
+            self.collection = None  # No ChromaDB collection
+            print("✅ Alternative storage (in-memory embeddings) created successfully")
+        except Exception as e:
+            print(f"❌ Error setting up alternative storage: {e}")
+            self.chunk_embeddings = None
+            self.collection = None
+    
     def _setup_retrieval(self):
         """Setup the retrieval system with text chunks and indices."""
         print("Setting up retrieval system...")
@@ -152,17 +179,25 @@ class FinancialQASystem:
                 text_splitter = RecursiveCharacterTextSplitter(chunk_size=400, chunk_overlap=50)
                 self.chunks = text_splitter.split_text(full_text)
                 
-                # Setup ChromaDB
-                client = chromadb.Client()
-                self.collection = client.get_or_create_collection(name="financials_rag")
-                
-                # Create embeddings
-                chunk_embeddings = self.embedding_model.encode(self.chunks, show_progress_bar=False)
-                self.collection.add(
-                    ids=[str(i) for i in range(len(self.chunks))],
-                    embeddings=chunk_embeddings.tolist(),
-                    documents=self.chunks
-                )
+                # Setup storage (ChromaDB or alternative)
+                if CHROMADB_AVAILABLE:
+                    try:
+                        client = chromadb.Client()
+                        self.collection = client.get_or_create_collection(name="financials_rag")
+                        
+                        # Create embeddings
+                        chunk_embeddings = self.embedding_model.encode(self.chunks, show_progress_bar=False)
+                        self.collection.add(
+                            ids=[str(i) for i in range(len(self.chunks))],
+                            embeddings=chunk_embeddings.tolist(),
+                            documents=self.chunks
+                        )
+                        print("✅ ChromaDB vector store created successfully")
+                    except Exception as e:
+                        print(f"⚠️  ChromaDB failed: {e}. Using alternative storage.")
+                        self._setup_alternative_storage()
+                else:
+                    self._setup_alternative_storage()
                 
                 # Setup BM25
                 tokenized_chunks = [chunk.lower().split() for chunk in self.chunks]
@@ -180,9 +215,18 @@ class FinancialQASystem:
         processed_query = query.lower()
         
         # Dense Retrieval
-        query_embedding = self.embedding_model.encode(processed_query).tolist()
-        dense_results = self.collection.query(query_embeddings=[query_embedding], n_results=top_k)
-        dense_docs = dense_results['documents'][0]
+        if self.collection and CHROMADB_AVAILABLE:
+            # Use ChromaDB if available
+            try:
+                query_embedding = self.embedding_model.encode(processed_query).tolist()
+                dense_results = self.collection.query(query_embeddings=[query_embedding], n_results=top_k)
+                dense_docs = dense_results['documents'][0]
+            except Exception as e:
+                print(f"⚠️  ChromaDB query failed: {e}. Using alternative retrieval.")
+                dense_docs = self._alternative_dense_retrieval(query, top_k)
+        else:
+            # Use alternative storage
+            dense_docs = self._alternative_dense_retrieval(query, top_k)
         
         # Sparse Retrieval
         tokenized_query = processed_query.split()
@@ -200,6 +244,27 @@ class FinancialQASystem:
         
         reranked_results = sorted(fused_scores.items(), key=lambda item: item[1], reverse=True)
         return [doc for doc, score in reranked_results][:top_k]
+    
+    def _alternative_dense_retrieval(self, query, top_k=5):
+        """Alternative dense retrieval using in-memory embeddings."""
+        if self.chunk_embeddings is None:
+            return []
+        
+        try:
+            # Encode query
+            query_embedding = self.embedding_model.encode(query)
+            
+            # Calculate similarities with all chunks
+            similarities = np.dot(self.chunk_embeddings, query_embedding) / (
+                np.linalg.norm(self.chunk_embeddings, axis=1) * np.linalg.norm(query_embedding)
+            )
+            
+            # Get top-k most similar chunks
+            top_indices = np.argsort(similarities)[::-1][:top_k]
+            return [self.chunks[i] for i in top_indices]
+        except Exception as e:
+            print(f"⚠️  Alternative dense retrieval failed: {e}")
+            return []
     
     def generate_answer(self, query, context, use_fine_tuned=True):
         """Generate answer using the specified model."""

@@ -204,7 +204,13 @@ def show_home():
             st.warning("⚠️ No financial data loaded. Please check local PDF files.")
         
         with col4:
-            st.metric("Vector Store", "ChromaDB")
+            # Check if ChromaDB is available
+            try:
+                import chromadb
+                vector_store = "ChromaDB"
+            except:
+                vector_store = "In-Memory"
+            st.metric("Vector Store", vector_store)
         
         # Local PDF status
         st.subheader("📁 Local PDF Status")
