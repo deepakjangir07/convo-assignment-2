@@ -1,0 +1,12 @@
+{
+  "group_number": 46,
+  "assignment": "Comparative Financial QA System: RAG vs Fine-Tuning",
+  "submission_date": "2025-08-23 17:41:44",
+  "advanced_rag_technique": "Hybrid Search (Sparse + Dense Retrieval)",
+  "advanced_fine_tuning_technique": "Adapter-Based Parameter-Efficient Tuning",
+  "total_files": 13,
+  "implementation_status": "Complete",
+  "open_source_compliance": "Yes - No proprietary APIs used",
+  "evaluation_complete": "Yes - 15+ questions evaluated",
+  "guardrails_implemented": "Yes - Input and output validation"
+}

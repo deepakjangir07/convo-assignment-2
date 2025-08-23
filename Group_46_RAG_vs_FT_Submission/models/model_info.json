@@ -1,0 +1,9 @@
+{
+  "base_model": "distilgpt2",
+  "embedding_model": "all-MiniLM-L6-v2",
+  "fine_tuned_path": "./ft_model_distilgpt2_adapters",
+  "model_parameters": "82M parameters",
+  "fine_tuning_method": "LoRA (Low-Rank Adaptation)",
+  "training_epochs": 10,
+  "learning_rate": "5e-5"
+}

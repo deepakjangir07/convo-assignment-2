@@ -1,0 +1,452 @@
+[
+  {
+    "question": "What was Microsoft's total revenue in fiscal year 2023?",
+    "answer": "Microsoft's total revenue in fiscal year 2023 was $211.9 billion.",
+    "category": "revenue",
+    "confidence": "high",
+    "data_source": "income_statement",
+    "id": 1,
+    "difficulty": "easy"
+  },
+  {
+    "question": "What was Microsoft's total revenue in fiscal year 2022?",
+    "answer": "Microsoft's total revenue in fiscal year 2022 was $198.3 billion.",
+    "category": "revenue",
+    "confidence": "high",
+    "data_source": "income_statement",
+    "id": 2,
+    "difficulty": "easy"
+  },
+  {
+    "question": "How much did Microsoft's revenue increase from 2022 to 2023?",
+    "answer": "Microsoft's revenue increased by $13.6 billion from 2022 to 2023, representing a 6.9% growth.",
+    "category": "revenue_growth",
+    "confidence": "high",
+    "data_source": "income_statement",
+    "id": 3,
+    "difficulty": "easy"
+  },
+  {
+    "question": "What was Microsoft Cloud revenue in 2023?",
+    "answer": "Microsoft Cloud revenue in 2023 was $111.6 billion.",
+    "category": "cloud_revenue",
+    "confidence": "high",
+    "data_source": "segment_breakdown",
+    "id": 4,
+    "difficulty": "easy"
+  },
+  {
+    "question": "What percentage of total revenue did Microsoft Cloud represent in 2023?",
+    "answer": "Microsoft Cloud represented approximately 52.7% of total revenue in 2023.",
+    "category": "revenue_mix",
+    "confidence": "high",
+    "data_source": "segment_breakdown",
+    "id": 5,
+    "difficulty": "easy"
+  },
+  {
+    "question": "What was Microsoft's total cost of revenue in 2023?",
+    "answer": "Microsoft's total cost of revenue in 2023 was $65.9 billion.",
+    "category": "costs",
+    "confidence": "high",
+    "data_source": "income_statement",
+    "id": 6,
+    "difficulty": "easy"
+  },
+  {
+    "question": "What was Microsoft's gross margin in 2023?",
+    "answer": "Microsoft's gross margin in 2023 was $146.0 billion.",
+    "category": "profitability",
+    "confidence": "high",
+    "data_source": "income_statement",
+    "id": 7,
+    "difficulty": "easy"
+  },
+  {
+    "question": "What was Microsoft's gross margin percentage in 2023?",
+    "answer": "Microsoft's gross margin percentage in 2023 was 68.9%.",
+    "category": "profitability",
+    "confidence": "high",
+    "data_source": "income_statement",
+    "id": 8,
+    "difficulty": "easy"
+  },
+  {
+    "question": "How much did Microsoft spend on research and development in 2023?",
+    "answer": "Microsoft spent $27.2 billion on research and development in 2023.",
+    "category": "rd_expenses",
+    "confidence": "high",
+    "data_source": "income_statement",
+    "id": 9,
+    "difficulty": "easy"
+  },
+  {
+    "question": "What were Microsoft's sales and marketing expenses in 2023?",
+    "answer": "Microsoft's sales and marketing expenses in 2023 were $22.7 billion.",
+    "category": "marketing_expenses",
+    "confidence": "high",
+    "data_source": "income_statement",
+    "id": 10,
+    "difficulty": "easy"
+  },
+  {
+    "question": "What was Microsoft's net income in fiscal year 2023?",
+    "answer": "Microsoft's net income in fiscal year 2023 was $72.4 billion.",
+    "category": "net_income",
+    "confidence": "high",
+    "data_source": "income_statement",
+    "id": 11,
+    "difficulty": "easy"
+  },
+  {
+    "question": "What was Microsoft's net income in fiscal year 2022?",
+    "answer": "Microsoft's net income in fiscal year 2022 was $72.7 billion.",
+    "category": "net_income",
+    "confidence": "high",
+    "data_source": "income_statement",
+    "id": 12,
+    "difficulty": "easy"
+  },
+  {
+    "question": "How did Microsoft's net income change from 2022 to 2023?",
+    "answer": "Microsoft's net income decreased slightly from $72.7 billion in 2022 to $72.4 billion in 2023, a decrease of $0.3 billion.",
+    "category": "profitability_trend",
+    "confidence": "high",
+    "data_source": "income_statement",
+    "id": 13,
+    "difficulty": "easy"
+  },
+  {
+    "question": "What was Microsoft's operating income in 2023?",
+    "answer": "Microsoft's operating income in 2023 was $88.5 billion.",
+    "category": "operating_income",
+    "confidence": "high",
+    "data_source": "income_statement",
+    "id": 14,
+    "difficulty": "easy"
+  },
+  {
+    "question": "What was Microsoft's operating margin in 2023?",
+    "answer": "Microsoft's operating margin in 2023 was 41.8%.",
+    "category": "operating_margin",
+    "confidence": "high",
+    "data_source": "income_statement",
+    "id": 15,
+    "difficulty": "easy"
+  },
+  {
+    "question": "What was Microsoft's total assets as of June 30, 2023?",
+    "answer": "Microsoft's total assets as of June 30, 2023 were $411.9 billion.",
+    "category": "total_assets",
+    "confidence": "high",
+    "data_source": "balance_sheet",
+    "id": 16,
+    "difficulty": "easy"
+  },
+  {
+    "question": "What was Microsoft's total liabilities as of June 30, 2023?",
+    "answer": "Microsoft's total liabilities as of June 30, 2023 were $205.8 billion.",
+    "category": "total_liabilities",
+    "confidence": "high",
+    "data_source": "balance_sheet",
+    "id": 17,
+    "difficulty": "easy"
+  },
+  {
+    "question": "What was Microsoft's total stockholders' equity as of June 30, 2023?",
+    "answer": "Microsoft's total stockholders' equity as of June 30, 2023 was $206.1 billion.",
+    "category": "stockholders_equity",
+    "confidence": "high",
+    "data_source": "balance_sheet",
+    "id": 18,
+    "difficulty": "easy"
+  },
+  {
+    "question": "What was Microsoft's cash and cash equivalents as of June 30, 2023?",
+    "answer": "Microsoft's cash and cash equivalents as of June 30, 2023 were $34.7 billion.",
+    "category": "cash_position",
+    "confidence": "high",
+    "data_source": "balance_sheet",
+    "id": 19,
+    "difficulty": "easy"
+  },
+  {
+    "question": "What was Microsoft's total debt as of June 30, 2023?",
+    "answer": "Microsoft's total debt as of June 30, 2023 was $59.7 billion.",
+    "category": "debt",
+    "confidence": "high",
+    "data_source": "balance_sheet",
+    "id": 20,
+    "difficulty": "easy"
+  },
+  {
+    "question": "What was Microsoft's operating cash flow in fiscal year 2023?",
+    "answer": "Microsoft's operating cash flow in fiscal year 2023 was $87.6 billion.",
+    "category": "operating_cash_flow",
+    "confidence": "high",
+    "data_source": "cash_flow_statement",
+    "id": 21,
+    "difficulty": "easy"
+  },
+  {
+    "question": "What was Microsoft's investing cash flow in fiscal year 2023?",
+    "answer": "Microsoft's investing cash flow in fiscal year 2023 was -$23.8 billion.",
+    "category": "investing_cash_flow",
+    "confidence": "high",
+    "data_source": "cash_flow_statement",
+    "id": 22,
+    "difficulty": "easy"
+  },
+  {
+    "question": "What was Microsoft's financing cash flow in fiscal year 2023?",
+    "answer": "Microsoft's financing cash flow in fiscal year 2023 was -$58.9 billion.",
+    "category": "financing_cash_flow",
+    "confidence": "high",
+    "data_source": "cash_flow_statement",
+    "id": 23,
+    "difficulty": "easy"
+  },
+  {
+    "question": "How much did Microsoft spend on share repurchases in 2023?",
+    "answer": "Microsoft spent $47.5 billion on share repurchases in 2023.",
+    "category": "share_repurchases",
+    "confidence": "high",
+    "data_source": "cash_flow_statement",
+    "id": 24,
+    "difficulty": "easy"
+  },
+  {
+    "question": "What was Microsoft's free cash flow in fiscal year 2023?",
+    "answer": "Microsoft's free cash flow in fiscal year 2023 was $63.8 billion.",
+    "category": "free_cash_flow",
+    "confidence": "high",
+    "data_source": "cash_flow_statement",
+    "id": 25,
+    "difficulty": "easy"
+  },
+  {
+    "question": "What was the revenue from Office Commercial products and cloud services in 2023?",
+    "answer": "Office Commercial products and cloud services revenue in 2023 was $44.4 billion.",
+    "category": "office_commercial",
+    "confidence": "high",
+    "data_source": "segment_breakdown",
+    "id": 26,
+    "difficulty": "easy"
+  },
+  {
+    "question": "What was the revenue from Office Consumer products and cloud services in 2023?",
+    "answer": "Office Consumer products and cloud services revenue in 2023 was $5.7 billion.",
+    "category": "office_consumer",
+    "confidence": "high",
+    "data_source": "segment_breakdown",
+    "id": 27,
+    "difficulty": "easy"
+  },
+  {
+    "question": "What was the revenue from Windows in 2023?",
+    "answer": "Windows revenue in 2023 was $14.7 billion.",
+    "category": "windows",
+    "confidence": "high",
+    "data_source": "segment_breakdown",
+    "id": 28,
+    "difficulty": "easy"
+  },
+  {
+    "question": "What was the revenue from Xbox content and services in 2023?",
+    "answer": "Xbox content and services revenue in 2023 was $15.5 billion.",
+    "category": "gaming",
+    "confidence": "high",
+    "data_source": "segment_breakdown",
+    "id": 29,
+    "difficulty": "easy"
+  },
+  {
+    "question": "What was the revenue from LinkedIn in 2023?",
+    "answer": "LinkedIn revenue in 2023 was $15.2 billion.",
+    "category": "linkedin",
+    "confidence": "high",
+    "data_source": "segment_breakdown",
+    "id": 30,
+    "difficulty": "easy"
+  },
+  {
+    "question": "What are the primary strategic risks related to AI development?",
+    "answer": "Primary strategic risks related to AI development include regulatory challenges, ethical concerns, competition from other tech companies, and potential misuse of AI technology.",
+    "category": "ai_risks",
+    "confidence": "medium",
+    "data_source": "risk_factors",
+    "id": 31,
+    "difficulty": "medium"
+  },
+  {
+    "question": "What cybersecurity risks does Microsoft face?",
+    "answer": "Microsoft faces cybersecurity risks including sophisticated cyberattacks, data breaches, intellectual property theft, and the need to protect customer data and systems.",
+    "category": "cybersecurity_risks",
+    "confidence": "medium",
+    "data_source": "risk_factors",
+    "id": 32,
+    "difficulty": "medium"
+  },
+  {
+    "question": "What are the main competitive risks for Microsoft?",
+    "answer": "Main competitive risks include competition from cloud providers like AWS and Google Cloud, open-source alternatives, and rapid technological changes in the industry.",
+    "category": "competitive_risks",
+    "confidence": "medium",
+    "data_source": "risk_factors",
+    "id": 33,
+    "difficulty": "medium"
+  },
+  {
+    "question": "What regulatory risks does Microsoft face?",
+    "answer": "Microsoft faces regulatory risks including antitrust investigations, data privacy regulations like GDPR, and potential changes in tax laws and trade policies.",
+    "category": "regulatory_risks",
+    "confidence": "medium",
+    "data_source": "risk_factors",
+    "id": 34,
+    "difficulty": "medium"
+  },
+  {
+    "question": "What are the risks related to Microsoft's international operations?",
+    "answer": "Risks include currency fluctuations, political instability, trade restrictions, and varying regulatory environments across different countries.",
+    "category": "international_risks",
+    "confidence": "medium",
+    "data_source": "risk_factors",
+    "id": 35,
+    "difficulty": "medium"
+  },
+  {
+    "question": "Compare Microsoft's revenue growth between 2022 and 2023.",
+    "answer": "Microsoft's revenue grew from $198.3 billion in 2022 to $211.9 billion in 2023, representing a 6.9% increase. This growth was driven by strong performance in cloud services and productivity software.",
+    "category": "year_comparison",
+    "confidence": "high",
+    "data_source": "income_statement",
+    "id": 36,
+    "difficulty": "easy"
+  },
+  {
+    "question": "How did Microsoft's profit margins change from 2022 to 2023?",
+    "answer": "Microsoft's gross margin increased from 68.2% in 2022 to 68.9% in 2023, while operating margin increased from 41.5% to 41.8%. Net income margin decreased slightly from 36.7% to 34.2%.",
+    "category": "margin_comparison",
+    "confidence": "high",
+    "data_source": "income_statement",
+    "id": 37,
+    "difficulty": "easy"
+  },
+  {
+    "question": "Compare Microsoft's R&D spending between 2022 and 2023.",
+    "answer": "Microsoft's R&D spending increased from $24.5 billion in 2022 to $27.2 billion in 2023, representing an 11.0% increase, reflecting continued investment in innovation and new technologies.",
+    "category": "rd_comparison",
+    "confidence": "high",
+    "data_source": "income_statement",
+    "id": 38,
+    "difficulty": "easy"
+  },
+  {
+    "question": "How did Microsoft's cash position change from 2022 to 2023?",
+    "answer": "Microsoft's cash and cash equivalents decreased from $104.8 billion in 2022 to $34.7 billion in 2023, primarily due to share repurchases, dividend payments, and strategic investments.",
+    "category": "cash_comparison",
+    "confidence": "high",
+    "data_source": "balance_sheet",
+    "id": 39,
+    "difficulty": "easy"
+  },
+  {
+    "question": "Compare Microsoft's debt levels between 2022 and 2023.",
+    "answer": "Microsoft's total debt increased from $47.0 billion in 2022 to $59.7 billion in 2023, representing a 27.0% increase, primarily due to new debt issuances for strategic purposes.",
+    "category": "debt_comparison",
+    "confidence": "high",
+    "data_source": "balance_sheet",
+    "id": 40,
+    "difficulty": "easy"
+  },
+  {
+    "question": "What is the capital of France?",
+    "answer": "This question is not related to Microsoft's financial statements. The capital of France is Paris, but this information is not contained in the financial data.",
+    "category": "irrelevant",
+    "confidence": "low",
+    "data_source": "not_applicable",
+    "id": 41,
+    "difficulty": "hard"
+  },
+  {
+    "question": "What is the weather like in Seattle today?",
+    "answer": "This question is not related to Microsoft's financial statements. Weather information is not contained in the financial data.",
+    "category": "irrelevant",
+    "confidence": "low",
+    "data_source": "not_applicable",
+    "id": 42,
+    "difficulty": "hard"
+  },
+  {
+    "question": "How do you cook pasta?",
+    "answer": "This question is not related to Microsoft's financial statements. Cooking instructions are not contained in the financial data.",
+    "category": "irrelevant",
+    "confidence": "low",
+    "data_source": "not_applicable",
+    "id": 43,
+    "difficulty": "hard"
+  },
+  {
+    "question": "What is the population of Tokyo?",
+    "answer": "This question is not related to Microsoft's financial statements. Population data is not contained in the financial data.",
+    "category": "irrelevant",
+    "confidence": "low",
+    "data_source": "not_applicable",
+    "id": 44,
+    "difficulty": "hard"
+  },
+  {
+    "question": "What is the meaning of life?",
+    "answer": "This philosophical question is not related to Microsoft's financial statements. Such information is not contained in the financial data.",
+    "category": "irrelevant",
+    "confidence": "low",
+    "data_source": "not_applicable",
+    "id": 45,
+    "difficulty": "hard"
+  },
+  {
+    "question": "What are Microsoft's future growth prospects?",
+    "answer": "Based on the financial data, Microsoft shows strong growth in cloud services and productivity software. However, future growth prospects depend on many factors not fully detailed in the financial statements, including market conditions, competition, and technological changes.",
+    "category": "future_outlook",
+    "confidence": "low",
+    "data_source": "management_discussion",
+    "id": 46,
+    "difficulty": "hard"
+  },
+  {
+    "question": "How will AI impact Microsoft's business model?",
+    "answer": "While Microsoft is investing heavily in AI (evidenced by R&D spending of $27.2 billion in 2023), the specific impact on the business model is not fully detailed in the financial statements. This would require additional forward-looking analysis.",
+    "category": "ai_impact",
+    "confidence": "low",
+    "data_source": "strategic_discussion",
+    "id": 47,
+    "difficulty": "hard"
+  },
+  {
+    "question": "What is Microsoft's market share in cloud computing?",
+    "answer": "The financial statements show Microsoft Cloud revenue of $111.6 billion in 2023, but do not provide specific market share data. This information would require external market research data.",
+    "category": "market_share",
+    "confidence": "low",
+    "data_source": "external_data_required",
+    "id": 48,
+    "difficulty": "hard"
+  },
+  {
+    "question": "How does Microsoft compare to its competitors financially?",
+    "answer": "While Microsoft's financial performance is strong with $211.9 billion revenue and $72.4 billion net income in 2023, direct competitor comparisons are not provided in the financial statements. This would require analysis of other companies' financial data.",
+    "category": "competitive_analysis",
+    "confidence": "low",
+    "data_source": "external_data_required",
+    "id": 49,
+    "difficulty": "hard"
+  },
+  {
+    "question": "What is the long-term sustainability of Microsoft's business model?",
+    "answer": "Microsoft shows strong financial fundamentals with consistent revenue growth and profitability. However, long-term sustainability depends on many external factors not fully addressed in the financial statements, including technological disruption and market changes.",
+    "category": "sustainability",
+    "confidence": "low",
+    "data_source": "strategic_analysis",
+    "id": 50,
+    "difficulty": "hard"
+  }
+]

@@ -1,0 +1,5 @@
+Sample Microsoft Financial Data
+Revenue 2023: $211.9 billion
+Revenue 2022: $198.3 billion
+Net Income 2023: $72.4 billion
+Net Income 2022: $72.7 billion

@@ -1,0 +1,40 @@
+{
+  "mandatory_tests": [
+    {
+      "question": "What was Microsoft's revenue in 2023?",
+      "rag_answer": "$211.9 billion",
+      "fine_tuned_answer": "$211.9 billion",
+      "rag_confidence": 0.92,
+      "fine_tuned_confidence": 0.93,
+      "rag_time": 0.5,
+      "fine_tuned_time": 0.41
+    },
+    {
+      "question": "What are the primary strategic risks related to AI development?",
+      "rag_answer": "Regulatory challenges, ethical concerns, competition",
+      "fine_tuned_answer": "AI development risks include regulatory challenges",
+      "rag_confidence": 0.81,
+      "fine_tuned_confidence": 0.85,
+      "rag_time": 0.79,
+      "fine_tuned_time": 0.65
+    },
+    {
+      "question": "What is the capital of France?",
+      "rag_answer": "Not in scope - financial data only",
+      "fine_tuned_answer": "Not applicable to financial data",
+      "rag_confidence": 0.35,
+      "fine_tuned_confidence": 0.4,
+      "rag_time": 0.46,
+      "fine_tuned_time": 0.38
+    }
+  ],
+  "summary": {
+    "total_questions": 15,
+    "rag_avg_confidence": 0.82,
+    "fine_tuned_avg_confidence": 0.87,
+    "rag_avg_time": 0.58,
+    "fine_tuned_avg_time": 0.48,
+    "rag_accuracy": 0.93,
+    "fine_tuned_accuracy": 0.87
+  }
+}
