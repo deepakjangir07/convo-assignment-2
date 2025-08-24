@@ -28,16 +28,26 @@ class AssignmentEvaluator:
             print(f"❌ Error initializing QA system: {e}")
             return False
     
-    def load_qa_dataset(self, filename: str = "financial_qa_dataset.json"):
-        """Load the QA dataset."""
-        try:
-            with open(filename, 'r', encoding='utf-8') as f:
-                dataset = json.load(f)
-            print(f"✅ Loaded {len(dataset)} Q&A pairs from {filename}")
-            return dataset
-        except FileNotFoundError:
-            print(f"❌ Dataset file {filename} not found. Please run qa_dataset_creator.py first.")
-            return None
+            def load_qa_dataset(self, filename: str = "qa_dataset.csv"):
+            """Load the QA dataset from CSV."""
+            try:
+                dataset_df = pd.read_csv(filename)
+                print(f"✅ Loaded {len(dataset_df)} Q&A pairs from {filename}")
+                
+                # Convert DataFrame to list of dictionaries for compatibility
+                dataset = []
+                for _, row in dataset_df.iterrows():
+                    dataset.append({
+                        'question': row['question'],
+                        'answer': row['answer'],
+                        'category': 'financial',  # Default category
+                        'confidence': 'high'      # Default confidence
+                    })
+                
+                return dataset
+            except FileNotFoundError:
+                print(f"❌ Dataset file {filename} not found. Please ensure qa_dataset.csv is available.")
+                return None
     
     def create_mandatory_test_questions(self) -> List[Dict]:
         """Create the 3 mandatory test questions as specified in the assignment."""
@@ -100,7 +110,7 @@ class AssignmentEvaluator:
                 "expected_answer": expected_answer,
                 "model_answer": result["answer"],
                 "category": category,
-                "method": "Fine-tuned" if use_fine_tuned else "Base",
+                "method": "Fine-tuned" if use_fine_tuned else "RAG",
                 "confidence": result["confidence"],
                 "confidence_level": confidence_level,
                 "response_time": response_time,
@@ -113,7 +123,7 @@ class AssignmentEvaluator:
                 "question_id": question_data.get("id", "Q"),
                 "question": question,
                 "error": str(e),
-                "method": "Fine-tuned" if use_fine_tuned else "Base",
+                "method": "Fine-tuned" if use_fine_tuned else "RAG",
                 "category": category
             }
     
@@ -166,9 +176,9 @@ class AssignmentEvaluator:
         for test in self.mandatory_tests:
             print(f"Testing: {test['question']}")
             
-            # Test with Base model
-            base_result = self.evaluate_single_question(test, use_fine_tuned=False)
-            results.append(base_result)
+            # Test with RAG model
+            rag_result = self.evaluate_single_question(test, use_fine_tuned=False)
+            results.append(rag_result)
             
             # Test with Fine-tuned model
             ft_result = self.evaluate_single_question(test, use_fine_tuned=True)
@@ -201,9 +211,9 @@ class AssignmentEvaluator:
         for question in selected_questions[:num_questions]:
             print(f"Evaluating: {question['question'][:50]}...")
             
-            # Test with Base model
-            base_result = self.evaluate_single_question(question, use_fine_tuned=False)
-            results.append(base_result)
+            # Test with RAG model
+            rag_result = self.evaluate_single_question(question, use_fine_tuned=False)
+            results.append(rag_result)
             
             # Test with Fine-tuned model
             ft_result = self.evaluate_single_question(question, use_fine_tuned=True)
@@ -254,7 +264,7 @@ class AssignmentEvaluator:
         summary['total_responses'] = len(df)
         
         # Method comparison
-        for method in ['Base', 'Fine-tuned']:
+        for method in ['RAG', 'Fine-tuned']:
             method_df = df[df['method'] == method]
             
             summary[f'{method.lower()}_total'] = len(method_df)
@@ -325,10 +335,10 @@ class AssignmentEvaluator:
         print(f"  • Total Responses Generated: {summary.get('total_responses', 0)}")
         
         print(f"\n🤖 Model Performance Comparison:")
-        print(f"  Base Model:")
-        print(f"    • Average Confidence: {summary.get('base_avg_confidence', 0):.3f}")
-        print(f"    • Average Response Time: {summary.get('base_avg_response_time', 0):.3f}s")
-        print(f"    • Correctness Rate: {summary.get('base_correctness_rate', 0):.1%}")
+        print(f"  RAG Model:")
+        print(f"    • Average Confidence: {summary.get('rag_avg_confidence', 0):.3f}")
+        print(f"    • Average Response Time: {summary.get('rag_avg_response_time', 0):.3f}s")
+        print(f"    • Correctness Rate: {summary.get('rag_correctness_rate', 0):.1%}")
         
         print(f"  Fine-tuned Model:")
         print(f"    • Average Confidence: {summary.get('fine-tuned_avg_confidence', 0):.3f}")
@@ -337,7 +347,7 @@ class AssignmentEvaluator:
         
         print(f"\n🎯 Category Analysis:")
         for key, value in summary.items():
-            if key.endswith('_total') and not key.startswith(('base_', 'fine-tuned_')):
+            if key.endswith('_total') and not key.startswith(('rag_', 'fine-tuned_')):
                 category = key.replace('_total', '')
                 confidence = summary.get(f'{category}_avg_confidence', 0)
                 correctness = summary.get(f'{category}_correctness_rate', 0)

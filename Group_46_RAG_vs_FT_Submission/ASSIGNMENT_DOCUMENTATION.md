@@ -89,7 +89,7 @@ def hybrid_retrieval(self, query, top_k=5):
 - **Format**: Instruction-following style for fine-tuning
 
 #### **3.2 Model Selection**
-- **Base Model**: DistilGPT-2 (open-source, lightweight)
+- **RAG Model**: DistilGPT-2 (open-source, lightweight)
 - **Parameters**: 82M (suitable for fine-tuning on consumer hardware)
 - **Architecture**: Transformer-based with causal language modeling
 
@@ -122,7 +122,7 @@ ft_model = get_peft_model(base_model, lora_config)
 - **Parameter Efficiency**: Only 0.18% of parameters trained (147K vs 82M)
 - **Memory Efficient**: Minimal GPU memory requirements
 - **Fast Training**: Reduced training time and computational cost
-- **Model Preservation**: Base model capabilities maintained
+- **Model Preservation**: RAG model capabilities maintained
 
 #### **3.4 Guardrail Implementation**
 - **Input-side Guardrail**: Query validation and filtering

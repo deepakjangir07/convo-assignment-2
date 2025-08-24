@@ -5,7 +5,7 @@ A comprehensive Streamlit-based web application that combines Retrieval-Augmente
 ## 🚀 Features
 
 ### 🤖 AI Models
-- **Base Model**: DistilGPT-2 for general question answering
+- **RAG Model**: DistilGPT-2 for general question answering
 - **Fine-tuned Model**: Custom-trained DistilGPT-2 for financial domain expertise
 - **Hybrid Approach**: Combines both models for optimal performance
 
@@ -46,10 +46,31 @@ pip install -r requirements.txt
    - Place your financial documents (PDFs) in a `data/` folder
    - Or use the existing Microsoft 10-K reports if available
 
-4. **Run the application**
+4. **Ensure local PDF files are available** (see Data Sources section below)
+5. **Run the application**
 ```bash
 streamlit run app.py
 ```
+
+## 📊 **Data Sources & Local Files**
+
+The system automatically loads Microsoft's financial statements from local PDF files:
+- **2023 10-K Report**: `MSFT_2023_10K.pdf` (in project root)
+- **2022 10-K Report**: `MSFT_2022_10K.pdf` (in project root)
+- **Q&A Dataset**: `qa_dataset.csv` (in project root)
+- **Auto-processing**: PDFs are automatically converted to text and chunked
+- **Local caching**: Processed data is saved locally for faster subsequent loads
+
+### **Required Files**
+Ensure these files are present in your project directory:
+- `MSFT_2023_10K.pdf` - Microsoft 2023 10-K report
+- `MSFT_2022_10K.pdf` - Microsoft 2022 10-K report  
+- `qa_dataset.csv` - Question-answer dataset for evaluation
+
+### **Data Setup**
+1. **Place PDFs** in the project root directory
+2. **Verify files** are accessible
+3. **Launch app** - data will be loaded automatically
 
 ## 📁 Project Structure
 
@@ -59,6 +80,9 @@ financial-qa-system/
 ├── model_utils.py         # Core QA system and model utilities
 ├── requirements.txt       # Python dependencies
 ├── README.md             # This file
+├── MSFT_2023_10K.pdf     # Microsoft 2023 10-K report
+├── MSFT_2022_10K.pdf     # Microsoft 2022 10-K report
+├── qa_dataset.csv        # Question-answer dataset
 ├── data/                 # Data directory
 │   └── processed_financials.txt
 ├── ft_model_distilgpt2_adapters/  # Fine-tuned model (if available)
@@ -75,7 +99,7 @@ financial-qa-system/
 ### 2. Asking Questions
 - Go to **Ask Questions** tab
 - Enter your financial question
-- Choose between Base or Fine-tuned model
+- Choose between RAG or Fine-tuned model
 - Adjust advanced parameters if needed
 - Click "Get Answer" to receive results
 
@@ -113,7 +137,7 @@ The system tracks and displays:
 - **Confidence Scores**: Model certainty in answers
 - **Response Times**: Processing speed for each query
 - **Context Relevance**: Quality of retrieved information
-- **Model Comparison**: Base vs. fine-tuned performance
+- **Model Comparison**: RAG vs. fine-tuned performance
 
 ## 🚨 Troubleshooting
 
@@ -160,7 +184,7 @@ The system tracks and displays:
 - **Embeddings**: Sentence Transformers
 
 ### Models Used
-- **Base Model**: `distilgpt2` (82M parameters)
+- **RAG Model**: `distilgpt2` (82M parameters)
 - **Embedding Model**: `all-MiniLM-L6-v2` (384 dimensions)
 - **Fine-tuning**: LoRA (Low-Rank Adaptation) for efficiency
 

@@ -96,19 +96,58 @@ if 'evaluation_results' not in st.session_state:
 def initialize_system():
     """Initialize the QA system."""
     if st.session_state.qa_system is None:
-        with st.spinner("Loading models and setting up the system..."):
-            try:
-                st.session_state.qa_system = get_qa_system()
-                st.success("System initialized successfully!")
-                return True
-            except Exception as e:
-                st.error(f"Error initializing system: {str(e)}")
-                return False
+        progress_bar = st.progress(0)
+        status_text = st.empty()
+        
+        try:
+            status_text.text("Loading models...")
+            progress_bar.progress(25)
+            
+            st.session_state.qa_system = get_qa_system()
+            progress_bar.progress(75)
+            
+            status_text.text("Setting up retrieval system...")
+            progress_bar.progress(90)
+            
+            # Wait for chunks to be loaded
+            max_wait = 60  # 60 seconds timeout
+            wait_count = 0
+            while (not hasattr(st.session_state.qa_system, 'chunks') or 
+                   not st.session_state.qa_system.chunks) and wait_count < max_wait:
+                time.sleep(1)
+                wait_count += 1
+                progress_bar.progress(90 + (wait_count / max_wait) * 10)
+            
+            progress_bar.progress(100)
+            status_text.text("System ready!")
+            
+            st.success("🎉 System initialized successfully!")
+            return True
+            
+        except Exception as e:
+            st.error(f"❌ Error initializing system: {str(e)}")
+            return False
+        finally:
+            progress_bar.empty()
+            status_text.empty()
     return True
 
 def main():
     # Header
     st.markdown('<h1 class="main-header">📊 Financial Question Answering System</h1>', unsafe_allow_html=True)
+    
+    # Auto-initialize system if not already done
+    if st.session_state.qa_system is None:
+        try:
+            initialize_system()
+        except Exception as e:
+            st.error(f"❌ Failed to initialize system: {str(e)}")
+            st.info("Please check the console for detailed error messages and try refreshing the page.")
+    elif not hasattr(st.session_state.qa_system, 'chunks') or not st.session_state.qa_system.chunks:
+        # System is still initializing
+        st.warning("🔄 System is still initializing... Please wait.")
+        with st.spinner("Loading financial data and setting up retrieval system..."):
+            st.info("This process may take a few minutes on first run.")
     
     # Sidebar navigation
     with st.sidebar:
@@ -126,11 +165,16 @@ def main():
         st.markdown("---")
         st.markdown("### System Status")
         if st.session_state.qa_system:
-            st.success("✅ System Ready")
-            st.info(f"📊 Chunks: {len(st.session_state.qa_system.chunks) if st.session_state.qa_system.chunks else 0}")
+            if hasattr(st.session_state.qa_system, 'chunks') and st.session_state.qa_system.chunks:
+                st.success("✅ System Ready")
+                st.info(f"📊 Chunks: {len(st.session_state.qa_system.chunks)}")
+                st.info(f"🤖 Models: {'Fine-tuned + RAG' if st.session_state.qa_system.ft_model else 'RAG Only'}")
+            else:
+                st.warning("🔄 System Initializing...")
+                st.info("Please wait for initialization to complete")
         else:
             st.error("❌ System Not Ready")
-            if st.button("🔄 Initialize System"):
+            if st.button("🚀 Initialize System"):
                 initialize_system()
     
     # Main content based on selection
@@ -183,6 +227,10 @@ def show_home():
         if st.button("🚀 Initialize System", type="primary"):
             if initialize_system():
                 st.rerun()
+    elif not hasattr(st.session_state.qa_system, 'chunks') or not st.session_state.qa_system.chunks:
+        st.warning("🔄 System is still initializing... Please wait.")
+        with st.spinner("Loading financial data and setting up retrieval system..."):
+            st.info("This process may take a few minutes on first run.")
     else:
         st.success("🎉 System is ready! Navigate to 'Ask Questions' to start querying.")
         
@@ -239,6 +287,15 @@ def show_qa_interface():
     
     if st.session_state.qa_system is None:
         st.error("Please initialize the system first from the Home page.")
+        return
+    
+    # Check if system is properly initialized
+    if not hasattr(st.session_state.qa_system, 'chunks') or st.session_state.qa_system.chunks is None or len(st.session_state.qa_system.chunks) == 0:
+        st.error("❌ System not properly initialized. Please go to Home page and reinitialize.")
+        return
+    
+    if not hasattr(st.session_state.qa_system, 'embedding_model') or st.session_state.qa_system.embedding_model is None:
+        st.error("❌ Embedding model not loaded. Please go to Home page and reinitialize.")
         return
     
     # Query input

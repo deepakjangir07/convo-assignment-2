@@ -41,6 +41,8 @@ st.markdown("""
         padding: 1rem;
         border-radius: 5px;
         margin: 1rem 0;
+        color: #000000 !important;
+        font-weight: 500;
     }
     .context-box {
         background: #e9ecef;
@@ -49,6 +51,8 @@ st.markdown("""
         border-radius: 5px;
         margin: 1rem 0;
         font-size: 0.9rem;
+        color: #000000 !important;
+        font-weight: 400;
     }
     .stButton > button {
         background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
@@ -58,11 +62,26 @@ st.markdown("""
         padding: 0.5rem 2rem;
         font-weight: bold;
     }
-    .stButton > button:hover {
-        background: linear-gradient(135deg, #5a6fd8 0%, #6a4190 100%);
-        transform: translateY(-2px);
-        transition: all 0.3s ease;
-    }
+            .stButton > button:hover {
+            background: linear-gradient(135deg, #5a6fd8 0%, #6a4190 100%);
+            transform: translateY(-2px);
+            transition: all 0.3s ease;
+        }
+        
+        /* Ensure all text is visible */
+        .stMarkdown, .stText, .stDataFrame {
+            color: #000000 !important;
+        }
+        
+        /* Make sure answer and context text are clearly visible */
+        .answer-box p, .context-box p {
+            color: #000000 !important;
+            margin: 0;
+        }
+        
+        .answer-box div, .context-box div {
+            color: #000000 !important;
+        }
 </style>
 """, unsafe_allow_html=True)
 
@@ -77,19 +96,58 @@ if 'evaluation_results' not in st.session_state:
 def initialize_system():
     """Initialize the QA system."""
     if st.session_state.qa_system is None:
-        with st.spinner("Loading models and setting up the system..."):
-            try:
-                st.session_state.qa_system = get_qa_system()
-                st.success("System initialized successfully!")
-                return True
-            except Exception as e:
-                st.error(f"Error initializing system: {str(e)}")
-                return False
+        progress_bar = st.progress(0)
+        status_text = st.empty()
+        
+        try:
+            status_text.text("Loading models...")
+            progress_bar.progress(25)
+            
+            st.session_state.qa_system = get_qa_system()
+            progress_bar.progress(75)
+            
+            status_text.text("Setting up retrieval system...")
+            progress_bar.progress(90)
+            
+            # Wait for chunks to be loaded
+            max_wait = 60  # 60 seconds timeout
+            wait_count = 0
+            while (not hasattr(st.session_state.qa_system, 'chunks') or 
+                   not st.session_state.qa_system.chunks) and wait_count < max_wait:
+                time.sleep(1)
+                wait_count += 1
+                progress_bar.progress(90 + (wait_count / max_wait) * 10)
+            
+            progress_bar.progress(100)
+            status_text.text("System ready!")
+            
+            st.success("🎉 System initialized successfully!")
+            return True
+            
+        except Exception as e:
+            st.error(f"❌ Error initializing system: {str(e)}")
+            return False
+        finally:
+            progress_bar.empty()
+            status_text.empty()
     return True
 
 def main():
     # Header
     st.markdown('<h1 class="main-header">📊 Financial Question Answering System</h1>', unsafe_allow_html=True)
+    
+    # Auto-initialize system if not already done
+    if st.session_state.qa_system is None:
+        try:
+            initialize_system()
+        except Exception as e:
+            st.error(f"❌ Failed to initialize system: {str(e)}")
+            st.info("Please check the console for detailed error messages and try refreshing the page.")
+    elif not hasattr(st.session_state.qa_system, 'chunks') or not st.session_state.qa_system.chunks:
+        # System is still initializing
+        st.warning("🔄 System is still initializing... Please wait.")
+        with st.spinner("Loading financial data and setting up retrieval system..."):
+            st.info("This process may take a few minutes on first run.")
     
     # Sidebar navigation
     with st.sidebar:
@@ -107,11 +165,16 @@ def main():
         st.markdown("---")
         st.markdown("### System Status")
         if st.session_state.qa_system:
-            st.success("✅ System Ready")
-            st.info(f"📊 Chunks: {len(st.session_state.qa_system.chunks) if st.session_state.qa_system.chunks else 0}")
+            if hasattr(st.session_state.qa_system, 'chunks') and st.session_state.qa_system.chunks:
+                st.success("✅ System Ready")
+                st.info(f"📊 Chunks: {len(st.session_state.qa_system.chunks)}")
+                st.info(f"🤖 Models: {'Fine-tuned + RAG' if st.session_state.qa_system.ft_model else 'RAG Only'}")
+            else:
+                st.warning("🔄 System Initializing...")
+                st.info("Please wait for initialization to complete")
         else:
             st.error("❌ System Not Ready")
-            if st.button("🔄 Initialize System"):
+            if st.button("🚀 Initialize System"):
                 initialize_system()
     
     # Main content based on selection
@@ -164,6 +227,10 @@ def show_home():
         if st.button("🚀 Initialize System", type="primary"):
             if initialize_system():
                 st.rerun()
+    elif not hasattr(st.session_state.qa_system, 'chunks') or not st.session_state.qa_system.chunks:
+        st.warning("🔄 System is still initializing... Please wait.")
+        with st.spinner("Loading financial data and setting up retrieval system..."):
+            st.info("This process may take a few minutes on first run.")
     else:
         st.success("🎉 System is ready! Navigate to 'Ask Questions' to start querying.")
         
@@ -172,11 +239,47 @@ def show_home():
         with col1:
             st.metric("Total Chunks", len(st.session_state.qa_system.chunks) if st.session_state.qa_system.chunks else 0)
         with col2:
-            st.metric("Model Type", "Fine-tuned" if st.session_state.qa_system.ft_model else "Base")
+            st.metric("Model Type", "Fine-tuned" if st.session_state.qa_system.ft_model else "RAG")
         with col3:
             st.metric("Embedding Model", "all-MiniLM-L6-v2")
+        
+        # Data source information
+        st.subheader("📊 Data Source")
+        if st.session_state.qa_system.chunks:
+            st.success(f"✅ Financial data loaded: {len(st.session_state.qa_system.chunks)} text chunks")
+            st.info("📁 **Source**: Microsoft 10-K Reports (2022-2023) from local PDFs")
+        else:
+            st.warning("⚠️ No financial data loaded. Please check local PDF files.")
+        
         with col4:
-            st.metric("Vector Store", "ChromaDB")
+            # Check if ChromaDB is available
+            try:
+                import chromadb
+                vector_store = "ChromaDB"
+            except:
+                vector_store = "In-Memory"
+            st.metric("Vector Store", vector_store)
+        
+        # Local PDF status
+        st.subheader("📁 Local PDF Status")
+        pdf_paths = [
+            "MSFT_2023_10K.pdf",
+            "MSFT_2022_10K.pdf"
+        ]
+        
+        col1, col2 = st.columns(2)
+        with col1:
+            for pdf_path in pdf_paths:
+                if os.path.exists(pdf_path):
+                    file_size = os.path.getsize(pdf_path) / (1024 * 1024)  # MB
+                    st.success(f"✅ {os.path.basename(pdf_path)} - Available ({file_size:.1f} MB)")
+                else:
+                    st.error(f"❌ {os.path.basename(pdf_path)} - Not found")
+        
+        with col2:
+            st.info("💡 **Note**: The system automatically loads financial data from these local PDF files.")
+            if st.button("🔄 Refresh PDF Status"):
+                st.rerun()
 
 def show_qa_interface():
     """Display the main QA interface."""
@@ -186,12 +289,21 @@ def show_qa_interface():
         st.error("Please initialize the system first from the Home page.")
         return
     
+    # Check if system is properly initialized
+    if not hasattr(st.session_state.qa_system, 'chunks') or st.session_state.qa_system.chunks is None or len(st.session_state.qa_system.chunks) == 0:
+        st.error("❌ System not properly initialized. Please go to Home page and reinitialize.")
+        return
+    
+    if not hasattr(st.session_state.qa_system, 'embedding_model') or st.session_state.qa_system.embedding_model is None:
+        st.error("❌ Embedding model not loaded. Please go to Home page and reinitialize.")
+        return
+    
     # Query input
     col1, col2 = st.columns([3, 1])
     with col1:
         query = st.text_input("Enter your question:", placeholder="e.g., What was Microsoft's revenue in 2023?")
     with col2:
-        model_choice = st.selectbox("Model:", ["Fine-tuned", "Base"], index=0)
+        model_choice = st.selectbox("Model:", ["Fine-tuned", "RAG"], index=0)
     
     # Advanced options
     with st.expander("🔧 Advanced Options"):
@@ -355,7 +467,7 @@ def run_evaluation(questions):
         status_text.text(f"Evaluating: {question}")
         
         # Test both models
-        for model_name in ["Base", "Fine-tuned"]:
+        for model_name in ["RAG", "Fine-tuned"]:
             try:
                 use_fine_tuned = model_name == "Fine-tuned"
                 result = st.session_state.qa_system.answer_query_rag(question, use_fine_tuned)
@@ -406,6 +518,42 @@ def show_data_management():
             type=['pdf'],
             help="Upload a new PDF to add to the knowledge base"
         )
+    
+    # Local PDF information
+    st.markdown("---")
+    st.markdown("### 📁 Local PDF Files")
+    pdf_paths = [
+        "MSFT_2023_10K.pdf",
+        "MSFT_2022_10K.pdf"
+    ]
+    
+    col1, col2 = st.columns(2)
+    with col1:
+        for pdf_path in pdf_paths:
+            if os.path.exists(pdf_path):
+                file_size = os.path.getsize(pdf_path) / (1024 * 1024)  # MB
+                st.success(f"✅ {os.path.basename(pdf_path)} - Available ({file_size:.1f} MB)")
+            else:
+                st.error(f"❌ {os.path.basename(pdf_path)} - Not found")
+    
+    with col2:
+        st.info("💡 **Note**: The system automatically loads data from these local PDF files when available.")
+        if st.button("🔄 Reload from Local PDFs"):
+            with st.spinner("Reloading from local PDFs..."):
+                try:
+                    # Force reload from PDFs
+                    if hasattr(st.session_state.qa_system, '_load_from_local_pdfs'):
+                        full_text = st.session_state.qa_system._load_from_local_pdfs()
+                        if full_text and "Error" not in full_text:
+                            st.session_state.qa_system._setup_retrieval()
+                            st.success("✅ Data reloaded from local PDFs!")
+                            st.rerun()
+                        else:
+                            st.error("❌ Failed to reload from local PDFs")
+                    else:
+                        st.error("❌ Local PDF loading not available")
+                except Exception as e:
+                    st.error(f"❌ Error reloading: {str(e)}")
         
         if uploaded_file is not None:
             if st.button("🔄 Process PDF"):
@@ -477,7 +625,7 @@ def show_settings():
         st.markdown("### 🔧 Model Configuration")
         
         # Model settings
-        st.info(f"**Current Base Model:** distilgpt2")
+        st.info(f"**Current RAG Model:** distilgpt2")
         st.info(f"**Fine-tuned Model:** {'Available' if st.session_state.qa_system.ft_model else 'Not Available'}")
         st.info(f"**Embedding Model:** all-MiniLM-L6-v2")
         

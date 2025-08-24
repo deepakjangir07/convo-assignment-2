@@ -1,14 +1,58 @@
 import torch
-import fitz  # PyMuPDF
 import re
 import os
 import time
 import numpy as np
 import pandas as pd
+
+# Handle PyMuPDF import with fallback
+PYMUPDF_AVAILABLE = False
+fitz = None
+
+try:
+    import PyMuPDF
+    fitz = PyMuPDF
+    PYMUPDF_AVAILABLE = True
+    print("✅ PyMuPDF imported successfully")
+except ImportError:
+    try:
+        import fitz
+        PYMUPDF_AVAILABLE = True
+        print("✅ fitz (PyMuPDF) imported successfully")
+    except ImportError:
+        print("⚠️  PyMuPDF not available. PDF processing will be limited.")
+        PYMUPDF_AVAILABLE = False
+        fitz = None
+
 from transformers import AutoTokenizer, AutoModelForCausalLM
 from sentence_transformers import SentenceTransformer
 from langchain.text_splitter import RecursiveCharacterTextSplitter
-import chromadb
+# Handle SQLite dependency issue for ChromaDB
+CHROMADB_AVAILABLE = False
+chromadb = None
+
+try:
+    import chromadb
+    CHROMADB_AVAILABLE = True
+    print("✅ ChromaDB imported successfully")
+except RuntimeError as e:
+    if "sqlite3" in str(e):
+        print("⚠️  ChromaDB not available due to SQLite version. Using alternative storage.")
+        CHROMADB_AVAILABLE = False
+        chromadb = None
+    else:
+        print(f"⚠️  ChromaDB runtime error: {e}. Using alternative storage.")
+        CHROMADB_AVAILABLE = False
+        chromadb = None
+except ImportError as e:
+    print(f"⚠️  ChromaDB not available: {e}. Using alternative storage.")
+    CHROMADB_AVAILABLE = False
+    chromadb = None
+except Exception as e:
+    print(f"⚠️  Unexpected error importing ChromaDB: {e}. Using alternative storage.")
+    CHROMADB_AVAILABLE = False
+    chromadb = None
+
 from rank_bm25 import BM25Okapi
 from peft import PeftModel
 import warnings
@@ -29,12 +73,15 @@ class FinancialQASystem:
         # Initialize components
         self._load_models()
         self._setup_retrieval()
+        # Load embedding model after chunks are available
+        if self.chunks:
+            self._load_embedding_model()
     
     def _load_models(self):
         """Load all necessary models and tokenizers."""
         print("Loading models...")
         
-        # Load base model and tokenizer
+        # Load RAG model and tokenizer
         model_name = "distilgpt2"
         self.tokenizer = AutoTokenizer.from_pretrained(model_name)
         if self.tokenizer.pad_token is None:
@@ -53,48 +100,208 @@ class FinancialQASystem:
                 self.ft_model = self.ft_model.merge_and_unload()
                 print("Fine-tuned model loaded successfully!")
             else:
-                print("Fine-tuned model not found, using base model only.")
+                print("Fine-tuned model not found, using RAG model only.")
                 self.ft_model = None
         except Exception as e:
             print(f"Error loading fine-tuned model: {e}")
             self.ft_model = None
         
-        # Load embedding model
-        self.embedding_model = SentenceTransformer('all-MiniLM-L6-v2')
         print("Models loaded successfully!")
+    
+    def _load_embedding_model(self):
+        """Load the embedding model after chunks are available."""
+        try:
+            self.embedding_model = SentenceTransformer('all-MiniLM-L6-v2')
+            print("✅ Embedding model loaded successfully!")
+        except Exception as e:
+            print(f"❌ Error loading embedding model: {e}")
+            self.embedding_model = None
+    
+    def _load_from_local_pdfs(self):
+        """Load financial data from local PDF files."""
+        if not PYMUPDF_AVAILABLE:
+            print("❌ PyMuPDF not available. Cannot process PDFs.")
+            return "PDF processing not available. Please install PyMuPDF."
+        
+        try:
+            pdf_path_2023 = 'MSFT_2023_10K.pdf'
+            pdf_path_2022 = 'MSFT_2022_10K.pdf'
+            
+            full_text = ""
+            
+            # Load 2023 PDF
+            if os.path.exists(pdf_path_2023):
+                print(f"Loading {pdf_path_2023}...")
+                doc_2023 = fitz.open(pdf_path_2023)
+                text_2023 = ""
+                for page in doc_2023:
+                    text_2023 += page.get_text()
+                doc_2023.close()
+                full_text += "--- 2023 Microsoft 10-K Report ---\n" + text_2023 + "\n\n"
+                print("✅ 2023 PDF loaded successfully")
+            else:
+                print(f"⚠️  {pdf_path_2023} not found")
+            
+            # Load 2022 PDF
+            if os.path.exists(pdf_path_2022):
+                print(f"Loading {pdf_path_2022}...")
+                doc_2022 = fitz.open(pdf_path_2022)
+                text_2022 = ""
+                for page in doc_2022:
+                    text_2022 += page.get_text()
+                doc_2022.close()
+                full_text += "--- 2022 Microsoft 10-K Report ---\n" + text_2022 + "\n\n"
+                print("✅ 2022 PDF loaded successfully")
+            else:
+                print(f"⚠️  {pdf_path_2022} not found")
+            
+            if full_text:
+                # Save processed text locally for future use
+                os.makedirs(os.path.dirname(self.data_path), exist_ok=True)
+                with open(self.data_path, 'w', encoding='utf-8') as f:
+                    f.write(full_text)
+                print(f"✅ Processed text saved to {self.data_path}")
+                return full_text
+            else:
+                print("❌ No PDFs could be loaded")
+                return "Microsoft financial data not available. Please ensure PDFs are accessible."
+                
+        except Exception as e:
+            print(f"❌ Error loading PDFs: {e}")
+            return f"Error loading financial data: {str(e)}"
+    
+    def _setup_alternative_storage(self):
+        """Setup alternative storage when ChromaDB is not available."""
+        print("🔄 Setting up alternative storage...")
+        try:
+            # Store embeddings in memory as numpy arrays
+            chunk_embeddings = self.embedding_model.encode(self.chunks, show_progress_bar=False)
+            self.chunk_embeddings = chunk_embeddings
+            self.collection = None  # No ChromaDB collection
+            print("✅ Alternative storage (in-memory embeddings) created successfully")
+        except Exception as e:
+            print(f"❌ Error setting up alternative storage: {e}")
+            self.chunk_embeddings = None
+            self.collection = None
     
     def _setup_retrieval(self):
         """Setup the retrieval system with text chunks and indices."""
         print("Setting up retrieval system...")
         
-        # Load and process text if available
-        if os.path.exists(self.data_path):
-            with open(self.data_path, 'r', encoding='utf-8') as f:
-                full_text = f.read()
-            
-            # Create text chunks
-            text_splitter = RecursiveCharacterTextSplitter(chunk_size=400, chunk_overlap=50)
-            self.chunks = text_splitter.split_text(full_text)
-            
-            # Setup ChromaDB
-            client = chromadb.Client()
-            self.collection = client.get_or_create_collection(name="financials_rag")
-            
-            # Create embeddings
-            chunk_embeddings = self.embedding_model.encode(self.chunks, show_progress_bar=False)
-            self.collection.add(
-                ids=[str(i) for i in range(len(self.chunks))],
-                embeddings=chunk_embeddings.tolist(),
-                documents=self.chunks
-            )
-            
-            # Setup BM25
-            tokenized_chunks = [chunk.lower().split() for chunk in self.chunks]
-            self.bm25 = BM25Okapi(tokenized_chunks)
-            
-            print(f"Retrieval system setup complete with {len(self.chunks)} chunks.")
-        else:
-            print("Data file not found. Please ensure processed_financials.txt exists.")
+        try:
+            # Load and process text if available
+            if os.path.exists(self.data_path):
+                with open(self.data_path, 'r', encoding='utf-8') as f:
+                    full_text = f.read()
+                
+                # Create text chunks
+                text_splitter = RecursiveCharacterTextSplitter(chunk_size=400, chunk_overlap=50)
+                self.chunks = text_splitter.split_text(full_text)
+                
+                # Setup storage (ChromaDB or alternative)
+                if CHROMADB_AVAILABLE and chromadb is not None and self.embedding_model:
+                    try:
+                        print("🔄 Attempting to setup ChromaDB...")
+                        # Double-check chromadb is actually available
+                        if hasattr(chromadb, 'Client'):
+                            client = chromadb.Client()
+                            self.collection = client.get_or_create_collection(name="financials_rag")
+                            
+                            # Create embeddings
+                            chunk_embeddings = self.embedding_model.encode(self.chunks, show_progress_bar=False)
+                            self.collection.add(
+                                ids=[str(i) for i in range(len(self.chunks))],
+                                embeddings=chunk_embeddings.tolist(),
+                                documents=self.chunks
+                            )
+                            print("✅ ChromaDB vector store created successfully")
+                        else:
+                            print("⚠️  ChromaDB Client not available. Using alternative storage.")
+                            self._setup_alternative_storage()
+                    except Exception as e:
+                        print(f"⚠️  ChromaDB failed: {e}. Using alternative storage.")
+                        self._setup_alternative_storage()
+                else:
+                    print("🔄 ChromaDB not available or embedding model not loaded, using alternative storage...")
+                    self._setup_alternative_storage()
+                
+                # Setup BM25
+                try:
+                    tokenized_chunks = [chunk.lower().split() for chunk in self.chunks]
+                    self.bm25 = BM25Okapi(tokenized_chunks)
+                    print("✅ BM25 sparse index created successfully")
+                except Exception as e:
+                    print(f"⚠️  BM25 setup failed: {e}")
+                    self.bm25 = None
+                
+                print(f"✅ Retrieval system setup complete with {len(self.chunks)} chunks.")
+                print(f"📊 Storage: {'ChromaDB' if self.collection else 'Alternative (In-Memory)'}")
+                print(f"📊 Sparse: {'BM25' if self.bm25 else 'Not available'}")
+            else:
+                # Try to load from local PDFs if local data not available
+                print("Local data not found, attempting to load from local PDFs...")
+                full_text = self._load_from_local_pdfs()
+                
+                if full_text and "Error" not in full_text:
+                    # Create text chunks
+                    text_splitter = RecursiveCharacterTextSplitter(chunk_size=400, chunk_overlap=50)
+                    self.chunks = text_splitter.split_text(full_text)
+                    
+                    # Setup storage (ChromaDB or alternative)
+                    if CHROMADB_AVAILABLE and chromadb is not None and self.embedding_model:
+                        try:
+                            print("🔄 Attempting to setup ChromaDB...")
+                            # Double-check chromadb is actually available
+                            if hasattr(chromadb, 'Client'):
+                                client = chromadb.Client()
+                                self.collection = client.get_or_create_collection(name="financials_rag")
+                                
+                                # Create embeddings
+                                chunk_embeddings = self.embedding_model.encode(self.chunks, show_progress_bar=False)
+                                self.collection.add(
+                                    ids=[str(i) for i in range(len(self.chunks))],
+                                    embeddings=chunk_embeddings.tolist(),
+                                    documents=self.chunks
+                                )
+                                print("✅ ChromaDB vector store created successfully")
+                            else:
+                                print("⚠️  ChromaDB Client not available. Using alternative storage.")
+                                self._setup_alternative_storage()
+                        except Exception as e:
+                            print(f"⚠️  ChromaDB failed: {e}. Using alternative storage.")
+                            self._setup_alternative_storage()
+                    else:
+                        print("🔄 ChromaDB not available or embedding model not loaded, using alternative storage...")
+                        self._setup_alternative_storage()
+                    
+                    # Setup BM25
+                    try:
+                        tokenized_chunks = [chunk.lower().split() for chunk in self.chunks]
+                        self.bm25 = BM25Okapi(tokenized_chunks)
+                        print("✅ BM25 sparse index created successfully")
+                    except Exception as e:
+                        print(f"⚠️  BM25 setup failed: {e}")
+                        self.bm25 = None
+                    
+                    print(f"✅ Retrieval system setup complete with {len(self.chunks)} chunks.")
+                    print(f"📊 Storage: {'ChromaDB' if self.collection else 'Alternative (In-Memory)'}")
+                    print(f"📊 Sparse: {'BM25' if self.bm25 else 'Not available'}")
+                else:
+                    print("Data file not found and Google Drive PDFs not accessible. Please ensure data is available.")
+                    
+        except Exception as e:
+            print(f"❌ Critical error in retrieval setup: {e}")
+            print("🔄 Attempting to continue with minimal setup...")
+            # Ensure we have at least some basic setup
+            if not hasattr(self, 'chunks') or not self.chunks:
+                self.chunks = ["Financial data not available. Please check your data sources."]
+            if not hasattr(self, 'collection'):
+                self.collection = None
+            if not hasattr(self, 'bm25'):
+                self.bm25 = None
+            if not hasattr(self, 'chunk_embeddings'):
+                self.chunk_embeddings = None
+            print("✅ Minimal retrieval system setup complete")
     
     def hybrid_retrieval(self, query, top_k=5):
         """Perform hybrid retrieval using BM25 and vector search."""
@@ -104,15 +311,35 @@ class FinancialQASystem:
         processed_query = query.lower()
         
         # Dense Retrieval
-        query_embedding = self.embedding_model.encode(processed_query).tolist()
-        dense_results = self.collection.query(query_embeddings=[query_embedding], n_results=top_k)
-        dense_docs = dense_results['documents'][0]
+        if self.collection and CHROMADB_AVAILABLE and chromadb is not None:
+            # Use ChromaDB if available
+            try:
+                query_embedding = self.embedding_model.encode(processed_query).tolist()
+                dense_results = self.collection.query(query_embeddings=[query_embedding], n_results=top_k)
+                dense_docs = dense_results['documents'][0]
+                print("✅ ChromaDB retrieval successful")
+            except Exception as e:
+                print(f"⚠️  ChromaDB query failed: {e}. Using alternative retrieval.")
+                dense_docs = self._alternative_dense_retrieval(query, top_k)
+        else:
+            # Use alternative storage
+            print("🔄 Using alternative dense retrieval...")
+            dense_docs = self._alternative_dense_retrieval(query, top_k)
         
         # Sparse Retrieval
-        tokenized_query = processed_query.split()
-        bm25_scores = self.bm25.get_scores(tokenized_query)
-        top_n_indices = np.argsort(bm25_scores)[::-1][:top_k]
-        sparse_docs = [self.chunks[i] for i in top_n_indices]
+        if self.bm25 is not None:
+            try:
+                tokenized_query = processed_query.split()
+                bm25_scores = self.bm25.get_scores(tokenized_query)
+                top_n_indices = np.argsort(bm25_scores)[::-1][:top_k]
+                sparse_docs = [self.chunks[i] for i in top_n_indices]
+                print("✅ BM25 sparse retrieval successful")
+            except Exception as e:
+                print(f"⚠️  BM25 retrieval failed: {e}. Using simple keyword matching.")
+                sparse_docs = self._simple_keyword_retrieval(query, top_k)
+        else:
+            print("🔄 BM25 not available, using simple keyword matching...")
+            sparse_docs = self._simple_keyword_retrieval(query, top_k)
         
         # RRF Fusion
         fused_scores = {}
@@ -124,6 +351,53 @@ class FinancialQASystem:
         
         reranked_results = sorted(fused_scores.items(), key=lambda item: item[1], reverse=True)
         return [doc for doc, score in reranked_results][:top_k]
+    
+    def _simple_keyword_retrieval(self, query, top_k=5):
+        """Simple keyword-based retrieval when BM25 is not available."""
+        try:
+            query_words = query.lower().split()
+            chunk_scores = []
+            
+            for i, chunk in enumerate(self.chunks):
+                chunk_lower = chunk.lower()
+                score = sum(1 for word in query_words if word in chunk_lower)
+                chunk_scores.append((score, i))
+            
+            # Sort by score and get top-k
+            chunk_scores.sort(reverse=True)
+            top_indices = [i for score, i in chunk_scores[:top_k] if score > 0]
+            
+            if top_indices:
+                return [self.chunks[i] for i in top_indices]
+            else:
+                # Fallback to first few chunks if no matches
+                return self.chunks[:top_k]
+                
+        except Exception as e:
+            print(f"⚠️  Simple keyword retrieval failed: {e}")
+            # Ultimate fallback
+            return self.chunks[:top_k] if self.chunks else []
+    
+    def _alternative_dense_retrieval(self, query, top_k=5):
+        """Alternative dense retrieval using in-memory embeddings."""
+        if self.chunk_embeddings is None:
+            return []
+        
+        try:
+            # Encode query
+            query_embedding = self.embedding_model.encode(query)
+            
+            # Calculate similarities with all chunks
+            similarities = np.dot(self.chunk_embeddings, query_embedding) / (
+                np.linalg.norm(self.chunk_embeddings, axis=1) * np.linalg.norm(query_embedding)
+            )
+            
+            # Get top-k most similar chunks
+            top_indices = np.argsort(similarities)[::-1][:top_k]
+            return [self.chunks[i] for i in top_indices]
+        except Exception as e:
+            print(f"⚠️  Alternative dense retrieval failed: {e}")
+            return []
     
     def generate_answer(self, query, context, use_fine_tuned=True):
         """Generate answer using the specified model."""
@@ -177,6 +451,9 @@ Answer:
     
     def process_pdf(self, pdf_path):
         """Process a PDF file and add to the knowledge base."""
+        if not PYMUPDF_AVAILABLE:
+            return False, "PDF processing not available. Please install PyMuPDF."
+        
         try:
             doc = fitz.open(pdf_path)
             text = ""
@@ -227,5 +504,16 @@ def get_qa_system():
     """Get or create the QA system instance."""
     global qa_system
     if qa_system is None:
-        qa_system = FinancialQASystem()
+        try:
+            qa_system = FinancialQASystem()
+            # Verify the system is properly initialized
+            if qa_system.chunks is None or len(qa_system.chunks) == 0:
+                raise Exception("Failed to load financial data chunks")
+            if qa_system.embedding_model is None:
+                raise Exception("Failed to load embedding model")
+            print("✅ QA System initialized successfully with all components")
+        except Exception as e:
+            print(f"❌ Error initializing QA System: {e}")
+            qa_system = None
+            raise e
     return qa_system 

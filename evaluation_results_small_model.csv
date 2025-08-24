@@ -1,0 +1,11 @@
+Method,Question,Answer,Confidence,Time (s)
+RAG (DistilGPT2),What was Microsoft's revenue in 2023?,,0.9,7.055958032608032
+Fine-Tune (DistilGPT2),What was Microsoft's revenue in 2023?,,0.9,4.3557398319244385
+RAG (DistilGPT2),What are the primary strategic risks related to AI development?,,0.9,6.0338311195373535
+Fine-Tune (DistilGPT2),What are the primary strategic risks related to AI development?,,0.9,4.947551012039185
+RAG (DistilGPT2),What is the capital of France?,,0.9,5.808189868927002
+Fine-Tune (DistilGPT2),What is the capital of France?,,0.9,3.8217740058898926
+RAG (DistilGPT2),How much cash was used in financing activities in 2023?,,0.9,6.2906880378723145
+Fine-Tune (DistilGPT2),How much cash was used in financing activities in 2023?,,0.9,4.207902908325195
+RAG (DistilGPT2),Compare the net income of 2023 and 2022.,,0.9,8.858300924301147
+Fine-Tune (DistilGPT2),Compare the net income of 2023 and 2022.,,0.9,5.0104241371154785
