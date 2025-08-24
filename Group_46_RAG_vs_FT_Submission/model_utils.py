@@ -433,6 +433,11 @@ Answer:
         
         return answer, response_time
     
+    
+    
+ 
+    
+    
     def answer_query_rag(self, query, use_fine_tuned=True):
         """Complete RAG pipeline."""
         retrieved_chunks = self.hybrid_retrieval(query)
@@ -440,7 +445,7 @@ Answer:
         answer, response_time = self.generate_answer(query, context, use_fine_tuned)
         
         # Simple confidence scoring
-        confidence = 0.9 if answer and len(answer) > 10 else 0.4
+        _, confidence = self.rag_output_guardrail(answer, context)
         
         return {
             'answer': answer,
@@ -448,6 +453,32 @@ Answer:
             'response_time': response_time,
             'context': context[:500] + "..." if len(context) > 500 else context
         }
+
+    def rag_output_guardrail(self, answer, context):
+        
+        """Flags answers that are non-committal or don't seem to use the context."""
+        low_confidence_phrases = ["not mentioned", "not available", "i cannot answer"]
+        is_confident = not any(phrase in answer.lower() for phrase in low_confidence_phrases)
+    
+        # Simple check: Does the answer contain keywords from the context?
+        # This is a heuristic and can be improved.
+        context_keywords = set(word.lower() for word in re.findall(r'\b\w+\b', context) if len(word) > 2)
+        answer_keywords = set(word.lower() for word in re.findall(r'\b\w+\b', answer) if len(word) > 2)
+    
+        # Calculate the percentage of answer keywords present in the context keywords
+        overlap = len(answer_keywords.intersection(context_keywords))
+        answer_length = len(answer_keywords)
+        keyword_overlap_ratio = overlap / answer_length if answer_length > 0 else 0
+    
+        # Combine the checks for a confidence score (heuristic)
+        # Assign higher confidence if the answer seems to use the context and is not a low-confidence phrase
+        if is_confident and keyword_overlap_ratio > 0.1: # Threshold can be adjusted
+            confidence_score = 0.7 + (keyword_overlap_ratio * 0.3) # Scale keyword overlap into confidence
+            confidence_score = min(confidence_score, 1.0) # Cap confidence at 1.0
+        else:
+            confidence_score = 0.3 + (keyword_overlap_ratio * 0.1) # Lower base confidence if not confident or low overlap
+    
+        return answer, confidence_score
     
     def process_pdf(self, pdf_path):
         """Process a PDF file and add to the knowledge base."""
